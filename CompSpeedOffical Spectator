@@ -1,0 +1,160 @@
+local ScreenGui = game:GetService("CoreGui"):FindFirstChild("DeltaCustomGui") or Instance.new("ScreenGui")
+ScreenGui.Name = "DeltaCustomGui"
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.ResetOnSpawn = false
+
+local function makeBox(yPos, height)
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(0, 250, 0, height)
+    f.Position = UDim2.new(0, 10, 0, yPos)
+    f.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    f.BorderColor3 = Color3.fromRGB(0, 170, 255)
+    f.Active = true; f.Draggable = true; f.Parent = ScreenGui
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 6); c.Parent = f
+    return f
+end
+
+local b1 = makeBox(10, 50)
+local tb = Instance.new("TextBox")
+tb.Size = UDim2.new(1, -20, 1, -20)
+tb.Position = UDim2.new(0, 10, 0, 10)
+tb.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+tb.Text = ""; tb.PlaceholderText = "Type here..."
+tb.TextColor3 = Color3.fromRGB(255, 255, 255)
+tb.Parent = b1
+local c1 = Instance.new("UICorner")
+c1.CornerRadius = UDim.new(0, 4); c1.Parent = tb
+
+local b2 = makeBox(65, 90)
+local lbl = Instance.new("TextLabel")
+lbl.Size = UDim2.new(1, 0, 0, 40)
+lbl.BackgroundTransparency = 1; lbl.Text = "-00:10"
+lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+lbl.TextSize = 28; lbl.Font = Enum.Font.SourceSansBold; lbl.Parent = b2
+
+local secs = -10; local running = false
+local function update()
+    local abs = math.abs(secs)
+    lbl.Text = string.format("%s%02d:%02d", secs < 0 and "-" or "", math.floor(abs/60), abs%60)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if running and secs < 180 then
+            secs = secs + 1; update()
+            if secs >= 180 then running = false; lbl.TextColor3 = Color3.fromRGB(0, 255, 127) end
+        end
+    end
+end)
+
+local function btn(txt, x, col, fn)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0, 70, 0, 30)
+    b.Position = UDim2.new(0, x, 0, 50)
+    b.BackgroundColor3 = col; b.Text = txt
+    b.TextColor3 = Color3.fromRGB(255, 255, 255)
+    b.Font = Enum.Font.SourceSansBold; b.Parent = b2
+    b.MouseButton1Click:Connect(fn)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 4); c.Parent = b
+end
+
+btn("Start", 10, Color3.fromRGB(46, 139, 87), function() running = true end)
+btn("Stop", 90, Color3.fromRGB(178, 34, 34), function() running = false end)
+btn("Reset", 170, Color3.fromRGB(100, 100, 100), function() running = false; secs = -10; update() end)
+local ScreenGui = game:GetService("CoreGui"):WaitForChild("DeltaCustomGui")
+local LP = game.Players.LocalPlayer
+local Cam = workspace.CurrentCamera
+local RS = game:GetService("RunService")
+
+local function makeBox(yPos, height)
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(0, 250, 0, height)
+    f.Position = UDim2.new(0, 10, 0, yPos)
+    f.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    f.BorderColor3 = Color3.fromRGB(0, 170, 255)
+    f.Active = true; f.Draggable = true; f.Parent = ScreenGui
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 6); c.Parent = f
+    return f
+end
+
+local b3 = makeBox(160, 50)
+local plbl = Instance.new("TextLabel")
+plbl.Size = UDim2.new(1, -80, 1, 0); plbl.Position = UDim2.new(0, 40, 0, 0)
+plbl.BackgroundTransparency = 1; plbl.Text = "Self Viewing"
+plbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+plbl.Font = Enum.Font.SourceSansBold; plbl.Parent = b3
+
+local idx = 0; local targetPlayer = LP
+local function getList()
+    local t = {}
+    for _, p in ipairs(game.Players:GetPlayers()) do if p ~= LP then table.insert(t, p) end end
+    return t
+end
+
+local function target()
+    local l = getList()
+    if idx == 0 or #l == 0 then
+        idx = 0; targetPlayer = LP; plbl.Text = "Self Viewing"
+    else
+        if idx > #l then idx = 1 elseif idx < 1 then idx = #l end
+        targetPlayer = l[idx]
+        plbl.Text = "Viewing: " .. targetPlayer.DisplayName
+    end
+end
+
+local function arrow(txt, x, d)
+    local a = Instance.new("TextButton")
+    a.Size = UDim2.new(0, 30, 0, 30); a.Position = UDim2.new(0, x, 0, 10)
+    a.BackgroundColor3 = Color3.fromRGB(45, 45, 45); a.Text = txt
+    a.TextColor3 = Color3.fromRGB(0, 170, 255); a.Parent = b3
+    a.MouseButton1Click:Connect(function() idx = idx + d; target() end)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 4); c.Parent = a
+end
+arrow("<", 5, -1); arrow(">", 215, 1)
+
+local b4 = makeBox(215, 50)
+local mode = "3rd"
+
+local function vbtn(txt, x, m)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0, 70, 0, 30); b.Position = UDim2.new(0, x, 0, 10)
+    b.BackgroundColor3 = Color3.fromRGB(45, 45, 45); b.Text = txt
+    b.TextColor3 = Color3.fromRGB(255, 255, 255); b.Parent = b4
+    b.MouseButton1Click:Connect(function() mode = m end)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 4); c.Parent = b
+end
+vbtn("1st Person", 10, "1st")
+vbtn("Face View", 90, "2nd")
+vbtn("3rd Person", 170, "3rd")
+
+RS.RenderStepped:Connect(function()
+    local t = targetPlayer or LP
+    if t and t.Character then
+        local hum = t.Character:FindFirstChildOfClass("Humanoid")
+        local root = t.Character:FindFirstChild("HumanoidRootPart")
+        local head = t.Character:FindFirstChild("Head")
+        
+        if hum and root and head then
+            if mode == "1st" then
+                Cam.CameraType = Enum.CameraType.Scriptable
+                Cam.CFrame = head.CFrame * CFrame.new(0, 0, -0.1)
+            elseif mode == "2nd" then
+                Cam.CameraType = Enum.CameraType.Scriptable
+                local faceOffset = root.CFrame * CFrame.new(0, 1.5, -5)
+                Cam.CFrame = CFrame.new(faceOffset.Position, head.Position)
+            elseif mode == "3rd" then
+                Cam.CameraType = Enum.CameraType.Custom
+                Cam.CameraSubject = hum
+            end
+            return
+        end
+    end
+    Cam.CameraType = Enum.CameraType.Custom
+    if LP.Character then Cam.CameraSubject = LP.Character:FindFirstChildOfClass("Humanoid") end
+end)
