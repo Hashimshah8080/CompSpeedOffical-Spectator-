@@ -1,0 +1,209 @@
+-- PART 1: THE SCANNER ENGINE (3-Tier Accurate Scoring)
+if not game:IsLoaded() then game.Loaded:Wait() end
+local Players = game:GetService("Players")
+_G.ServerDatabase = _G.ServerDatabase or {}
+
+local function StartPassiveMonitoring(player)
+    if player == Players.LocalPlayer then return end
+    _G.ServerDatabase[player.Name] = {Verdict = "Not Scripting", Points = 0, LastPosition = nil}
+    
+    task.spawn(function()
+        while player and player.Parent do
+            local char = player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChildOfClass("Humanoid") then
+                local root = char.HumanoidRootPart
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                local currentPos = root.Position
+                local lastPos = _G.ServerDatabase[player.Name].LastPosition
+                
+                if lastPos then
+                    local speed = (currentPos - lastPos).Magnitude / 0.5
+                    
+                    if speed > 85 or root.AssemblyLinearVelocity.Y > 120 then 
+                        _G.ServerDatabase[player.Name].Points = 5
+                    elseif speed > 35 or hum.WalkSpeed > 35 then
+                        if _G.ServerDatabase[player.Name].Points < 3 then
+                            _G.ServerDatabase[player.Name].Points = 3
+                        else
+                            _G.ServerDatabase[player.Name].Points = 5
+                        end
+                    elseif root.AssemblyLinearVelocity.Magnitude > 10 and hum.MoveDirection.Magnitude == 0 then 
+                        if _G.ServerDatabase[player.Name].Points < 2 then
+                            _G.ServerDatabase[player.Name].Points = 2
+                        end
+                    end
+                end
+                _G.ServerDatabase[player.Name].LastPosition = currentPos
+            end
+            
+            local pts = _G.ServerDatabase[player.Name].Points
+            if pts >= 4 then 
+                _G.ServerDatabase[player.Name].Verdict = "SCRIPTING"
+            elseif pts >= 2 and pts < 4 then 
+                _G.ServerDatabase[player.Name].Verdict = "Might Be Scripting"
+            else 
+                _G.ServerDatabase[player.Name].Verdict = "Not Scripting" 
+            end
+            
+            task.wait(0.5)
+        end
+        _G.ServerDatabase[player.Name] = nil
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do StartPassiveMonitoring(p) end
+Players.PlayerAdded:Connect(StartPassiveMonitoring)
+print("✅ Part 1 Reloaded: Fixed 3-Option Verdict Conditions Active!")
+-- PART 2: DUAL-SELECTION INDEPENDENT VIEWPORT INTERFACE
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
+
+local phoneActive, tapSelectionActive, targetedPlayer, databaseConnection, currentBox = false, false, nil, nil, nil
+
+-- Build Base Screen Node
+local Gui = Instance.new("ScreenGui") 
+Gui.Name = "CCTVGuiDualInputFinal" 
+Gui.ResetOnSpawn = false 
+Gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- 1. TOGGLE BUTTON: Positions perfectly to top-right screen bounds
+local Toggle = Instance.new("TextButton") 
+Toggle.Size = UDim2.new(0.06, 0, 0.08, 0) 
+Toggle.Position = UDim2.new(0.93, 0, 0.02, 0) 
+Toggle.Text = "📱" 
+Toggle.TextScaled = true
+Toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 35) 
+Toggle.TextColor3 = Color3.fromRGB(255, 255, 255) 
+Toggle.ZIndex = 10
+Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0.2, 0) 
+Toggle.Parent = Gui
+
+-- 2. THE PHONE FRAME: Constrained scaling right beneath the toggle module
+local Phone = Instance.new("Frame") 
+Phone.Size = UDim2.new(0.22, 0, 0.52, 0) 
+Phone.Position = UDim2.new(0.77, 0, 0.11, 0) 
+Phone.BackgroundColor3 = Color3.fromRGB(22, 22, 22) 
+Phone.Visible = false 
+Phone.ZIndex = 9
+Instance.new("UICorner", Phone).CornerRadius = UDim.new(0.05, 0) 
+Phone.Parent = Gui
+
+-- Sub-Layout Nodes
+local Title = Instance.new("TextLabel") Title.Size = UDim2.new(1, 0, 0.12, 0) Title.Text = "CCTV PHONE CENTER" Title.TextColor3 = Color3.fromRGB(255, 215, 0) Title.BackgroundColor3 = Color3.fromRGB(32, 32, 32) Title.TextScaled = true Title.Font = Enum.Font.SourceSansBold Title.ZIndex = 10 Instance.new("UICorner", Title).CornerRadius = UDim.new(0.2, 0) Title.Parent = Phone
+local SelectNearest = Instance.new("TextButton") SelectNearest.Size = UDim2.new(0.9, 0, 0.13, 0) SelectNearest.Position = UDim2.new(0.05, 0, 0.15, 0) SelectNearest.Text = "Lock Nearest Player" SelectNearest.BackgroundColor3 = Color3.fromRGB(0, 120, 255) SelectNearest.TextColor3 = Color3.fromRGB(255, 255, 255) SelectNearest.Font = Enum.Font.SourceSansBold SelectNearest.TextScaled = true SelectNearest.ZIndex = 10 Instance.new("UICorner", SelectNearest).CornerRadius = UDim.new(0.2, 0) SelectNearest.Parent = Phone
+local SelectTap = Instance.new("TextButton") SelectTap.Size = UDim2.new(0.9, 0, 0.13, 0) SelectTap.Position = UDim2.new(0.05, 0, 0.30, 0) SelectTap.Text = "Tap A Player Manually" SelectTap.BackgroundColor3 = Color3.fromRGB(0, 160, 100) SelectTap.TextColor3 = Color3.fromRGB(255, 255, 255) SelectTap.Font = Enum.Font.SourceSansBold SelectTap.TextScaled = true SelectTap.ZIndex = 10 Instance.new("UICorner", SelectTap).CornerRadius = UDim.new(0.2, 0) SelectTap.Parent = Phone
+local NameTxt = Instance.new("TextLabel") NameTxt.Size = UDim2.new(0.9, 0, 0.11, 0) NameTxt.Position = UDim2.new(0.05, 0, 0.46, 0) NameTxt.Text = "Target: Offline" NameTxt.TextColor3 = Color3.fromRGB(180, 180, 180) NameTxt.BackgroundTransparency = 1 NameTxt.TextScaled = true NameTxt.ZIndex = 10 NameTxt.Parent = Phone
+local Status = Instance.new("TextLabel") Status.Size = UDim2.new(0.9, 0, 0, 50) Status.Position = UDim2.new(0.05, 0, 0.60, 0) Status.Text = "SYSTEM RECORDING 24/7" Status.TextColor3 = Color3.fromRGB(0, 255, 0) Status.BackgroundColor3 = Color3.fromRGB(12, 12, 12) Status.Font = Enum.Font.SourceSansBold Status.TextScaled = true Status.ZIndex = 10 Instance.new("UICorner", Status).CornerRadius = UDim.new(0.2, 0) Status.Parent = Phone
+local Reset = Instance.new("TextButton") Reset.Size = UDim2.new(0.9, 0, 0.12, 0) Reset.Position = UDim2.new(0.05, 0, 0.85, 0) Reset.Text = "Disconnect Feed" Reset.BackgroundColor3 = Color3.fromRGB(130, 0, 0) Reset.TextColor3 = Color3.fromRGB(255, 255, 255) Reset.Font = Enum.Font.SourceSansBold Reset.TextScaled = true Reset.ZIndex = 10 Instance.new("UICorner", Reset).CornerRadius = UDim.new(0.2, 0) Reset.Parent = Phone
+
+-- Tear-Down Reset Cycle
+local function StopCCTV()
+    if databaseConnection then databaseConnection:Disconnect() databaseConnection = nil end
+    if currentBox then currentBox:Destroy() currentBox = nil end
+    Camera.CameraType = Enum.CameraType.Custom -- Always forces camera back to baseline local player tracking
+    targetedPlayer = nil
+    tapSelectionActive = false
+    SelectTap.Text = "Tap A Player Manually"
+    SelectTap.BackgroundColor3 = Color3.fromRGB(0, 160, 100)
+    NameTxt.Text = "Target: Offline"
+    Status.Text = "SYSTEM RECORDING 24/7"
+    Status.TextColor3 = Color3.fromRGB(0, 255, 0)
+end
+
+-- Track Profile Logs While Leaving Camera Independent
+local function OpenProfile(target)
+    StopCCTV() 
+    targetedPlayer = target 
+    NameTxt.Text = "Target: " .. target.Name
+    
+    -- Inject the Red Matrix Outline Wrapper safely on the target
+    if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        currentBox = Instance.new("SelectionBox") 
+        currentBox.Color3 = Color3.fromRGB(255, 0, 0) 
+        currentBox.LineThickness = 0.04 
+        currentBox.Adornee = target.Character 
+        currentBox.Parent = target.Character
+    end
+    
+    -- Reads from global database every frame without mutating your camera position coordinates
+    databaseConnection = RunService.RenderStepped:Connect(function()
+        if targetedPlayer and targetedPlayer.Parent then
+            local prof = _G.ServerDatabase and _G.ServerDatabase[targetedPlayer.Name]
+            if prof then 
+                Status.Text = prof.Verdict 
+                Status.TextColor3 = prof.Verdict == "SCRIPTING" and Color3.fromRGB(255, 0, 0) or prof.Verdict == "Might Be Scripting" and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(0, 255, 0) 
+            end
+        else 
+            StopCCTV() 
+        end
+    end)
+end
+
+-- Proximity Vector Tracking Module
+local function LockNearestPlayer()
+    local myChar = LocalPlayer.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
+    
+    local nearestPlayer = nil
+    local shortestDistance = math.huge
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local distance = (myChar.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
+            if distance < shortestDistance then
+                shortestDistance = distance
+                nearestPlayer = player
+            end
+        end
+    end
+    
+    if nearestPlayer then OpenProfile(nearestPlayer) else NameTxt.Text = "No Target Near" end
+end
+
+-- Core System UI Drivers
+Toggle.MouseButton1Click:Connect(function() 
+    phoneActive = not phoneActive 
+    Phone.Visible = phoneActive 
+    if not phoneActive then StopCCTV() end
+end)
+
+SelectNearest.MouseButton1Click:Connect(LockNearestPlayer)
+
+SelectTap.MouseButton1Click:Connect(function()
+    tapSelectionActive = not tapSelectionActive
+    if tapSelectionActive then
+        SelectTap.Text = "Tap a Character on Screen..."
+        SelectTap.BackgroundColor3 = Color3.fromRGB(230, 140, 0)
+    else
+        SelectTap.Text = "Tap A Player Manually"
+        SelectTap.BackgroundColor3 = Color3.fromRGB(0, 160, 100)
+    end
+end)
+
+Reset.MouseButton1Click:Connect(StopCCTV)
+
+-- Processing Manual Taps Across 3D Coordinates
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed or not tapSelectionActive or not phoneActive then return end
+    
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local ray = Camera:ViewportPointToRay(input.Position.X, input.Position.Y)
+        local res = workspace:Raycast(ray.Origin, ray.Direction * 1000)
+        
+        local char = res and res.Instance and res.Instance.Parent
+        if char and not char:FindFirstChildOfClass("Humanoid") then char = char.Parent end
+        
+        if char and char:FindFirstChildOfClass("Humanoid") then
+            local pl = Players:GetPlayerFromCharacter(char)
+            if pl and pl ~= LocalPlayer then
+                OpenProfile(pl)
+            end
+        end
+    end
+end)
+
+print("✅ Part 2 Loaded: Dual-Input Screen Dashboard Configured Successfully!")
