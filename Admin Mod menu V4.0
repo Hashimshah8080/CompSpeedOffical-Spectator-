@@ -1,0 +1,207 @@
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+local userInputService = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
+local lighting = game:GetService("Lighting")
+
+-- 1. Create Main Screen GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DeltaScrollAdminV3"
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = player.PlayerGui
+
+-- 2. Create the Mobile Toggle Button (Visible everywhere)
+local mobileToggleButton = Instance.new("TextButton")
+mobileToggleButton.Size = UDim2.new(0, 50, 0, 50)
+mobileToggleButton.Position = UDim2.new(0, 10, 0.5, -25) -- Placed on the left edge
+mobileToggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+mobileToggleButton.Text = "Menu"
+mobileToggleButton.TextColor3 = Color3.new(1, 1, 1)
+mobileToggleButton.TextSize = 14
+mobileToggleButton.Font = Enum.Font.SourceSansBold
+mobileToggleButton.Parent = screenGui
+
+local mobileCorner = Instance.new("UICorner")
+mobileCorner.CornerRadius = UDim.new(1, 0) -- Makes button a perfect circle
+mobileCorner.Parent = mobileToggleButton
+
+-- 3. Create the Main Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 240, 0, 350)
+mainFrame.Position = UDim2.new(0.5, -120, 0.5, -175)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+-- 4. Title Bar
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+title.Text = "Delta Admin (25 Options)"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextSize = 14
+title.Font = Enum.Font.SourceSansBold
+title.Parent = mainFrame
+
+-- 5. Scrolling Frame
+local scrollingFrame = Instance.new("ScrollingFrame")
+scrollingFrame.Size = UDim2.new(1, 0, 1, -40)
+scrollingFrame.Position = UDim2.new(0, 0, 0, 40)
+scrollingFrame.BackgroundTransparency = 1
+scrollingFrame.BorderSizePixel = 0
+scrollingFrame.ScrollBarThickness = 8
+scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
+scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollingFrame.Parent = mainFrame
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Parent = scrollingFrame
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding = UDim.new(0, 6)
+listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 15)
+end)
+
+local padding = Instance.new("UIPadding")
+padding.PaddingTop = UDim.new(0, 5)
+padding.Parent = scrollingFrame
+
+-- 6. Connect Toggles (Both Keyboard "V" and Mobile Button)
+local function toggleMenu()
+    mainFrame.Visible = not mainFrame.Visible
+end
+
+mobileToggleButton.MouseButton1Click:Connect(toggleMenu)
+
+userInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.V then
+        toggleMenu()
+    end
+end)
+
+-- 7. Button Factory Function
+local optionCount = 0
+local function addOption(name, callback)
+    optionCount = optionCount + 1
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.9, 0, 0, 36)
+    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    button.BorderSizePixel = 0
+    button.Text = name
+    button.TextColor3 = Color3.new(1, 1, 1)
+    button.TextSize = 13
+    button.Font = Enum.Font.SourceSans
+    button.LayoutOrder = optionCount
+    button.Parent = scrollingFrame
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 4)
+    corner.Parent = button
+
+    button.MouseButton1Click:Connect(callback)
+end
+
+-- ==========================================
+-- DEFINE THE 25 ACTIONS
+-- ==========================================
+
+local function getHumanoid()
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
+        return player.Character.Humanoid
+    end
+    return nil
+end
+
+local function getRoot()
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        return player.Character.HumanoidRootPart
+    end
+    return nil
+end
+
+-- 1-5: Movement Basics
+addOption("1. Speed: Sprint (100)", function() local h = getHumanoid() if h then h.WalkSpeed = 100 end end)
+addOption("2. Speed: Flash (250)", function() local h = getHumanoid() if h then h.WalkSpeed = 250 end end)
+addOption("3. Jump: Super (120)", function() local h = getHumanoid() if h then h.JumpPower = 120 end end)
+addOption("4. Jump: Mega (250)", function() local h = getHumanoid() if h then h.JumpPower = 250 end end)
+addOption("5. Physics: Low Gravity", function() workspace.Gravity = 30 end)
+
+-- 6-10: Persistent Toggles
+local infJump = false
+addOption("6. Toggle Infinite Jump", function() infJump = not infJump end)
+userInputService.JumpRequest:Connect(function()
+    local h = getHumanoid() if infJump and h then h:ChangeState("Jumping") end
+end)
+
+local noclip = false
+addOption("7. Toggle Noclip", function() noclip = not noclip end)
+runService.Stepped:Connect(function()
+    if noclip and player.Character then
+        for _, p in pairs(player.Character:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = false end
+        end
+    end
+end)
+
+local swimMode = false
+addOption("8. Toggle Swim Anywhere", function()
+    local h = getHumanoid()
+    if h then
+        swimMode = not swimMode
+        if swimMode then h:ChangeState("Swimming") else h:ChangeState("GettingUp") end
+    end
+end)
+
+addOption("9. Height: Sit Character", function() local h = getHumanoid() if h then h.Sit = true end end)
+addOption("10. Height: Float (HipHeight 5)", function() local h = getHumanoid() if h then h.HipHeight = 5 end end)
+
+-- 11-15: Environment & Camera Control
+addOption("11. Camera: Max Zoom Out", function() player.MaxZoomDistance = 1000 end)
+addOption("12. Camera: Zoom In Close", function() player.MaxZoomDistance = 0.5 end)
+addOption("13. Environment: Set Noon", function() lighting.TimeOfDay = "12:00:00" end)
+addOption("14. Environment: Set Night", function() lighting.TimeOfDay = "00:00:00" end)
+addOption("15. Environment: Clear Fog", function() lighting.FogEnd = 999999 end)
+
+-- 16-20: Utility & Teleportation
+addOption("16. TP to Mouse Cursor", function() local r = getRoot() if r then r.CFrame = CFrame.new(mouse.Hit.p + Vector3.new(0,3,0)) end end)
+addOption("17. Position: Save Location", function() local r = getRoot() if r then _G.SavedPos = r.CFrame end end)
+addOption("18. Position: Load Location", function() local r = getRoot() if r and _G.SavedPos then r.CFrame = _G.SavedPos end end)
+addOption("19. Physics: Platform Stand", function() local h = getHumanoid() if h then h.PlatformStand = true end end)
+addOption("20. Physics: Un-Platform Stand", function() local h = getHumanoid() if h then h.PlatformStand = false end end)
+
+-- 21-25: Structural & Reset Changes
+addOption("21. Scale: Giant Head (Visual)", function() 
+    if player.Character and player.Character:FindFirstChild("Head") then
+        local mesh = player.Character.Head:FindFirstChildOfClass("SpecialMesh")
+        if mesh then mesh.Scale = Vector3.new(3, 3, 3) end
+    end
+end)
+addOption("22. Status: Break Joints", function() if player.Character then player.Character:BreakJoints() end end)
+addOption("23. Status: Instant Respawn", function() local h = getHumanoid() if h then h.Health = 0 end end)
+addOption("24. Physics: Freeze Position", function() local r = getRoot() if r then r.Anchored = true end end)
+addOption("25. RESET ALL OPTIONS", function()
+    workspace.Gravity = 196.2
+    noclip = false
+    infJump = false
+    swimMode = false
+    player.MaxZoomDistance = 400
+    lighting.TimeOfDay = "14:00:00"
+    local h = getHumanoid()
+    if h then
+        h.WalkSpeed = 16
+        h.JumpPower = 50
+        h.HipHeight = 0
+        h.PlatformStand = false
+    end
+    local r = getRoot()
+    if r then r.Anchored = false end
+    if player.Character and player.Character:FindFirstChild("Head") then
+        local mesh = player.Character.Head:FindFirstChildOfClass("SpecialMesh")
+        if mesh then mesh.Scale = Vector3.new(1, 1, 1) end
+    end
+end)
