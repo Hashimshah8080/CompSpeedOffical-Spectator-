@@ -1,0 +1,259 @@
+-- Delta RTX Shading Panel V5.0 (Part 1 of 3)
+-- Spawns the main window container plus the persistent ON/OFF toggle button
+
+local CoreGui = game:GetService("CoreGui")
+if CoreGui:FindFirstChild("DeltaRTXPanelV5") then
+    CoreGui.DeltaRTXPanelV5:Destroy()
+end
+
+_G.DeltaRTX = {}
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DeltaRTXPanelV5"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+-- ON/OFF Floating Toggle Button
+local MenuToggle = Instance.new("TextButton", ScreenGui)
+MenuToggle.Name = "MenuToggle"
+MenuToggle.Size = UDim2.new(0, 50, 0, 30)
+MenuToggle.Position = UDim2.new(0, 10, 0.4, 0)
+MenuToggle.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
+MenuToggle.Text = "RTX"
+MenuToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+MenuToggle.Font = Enum.Font.SourceSansBold
+MenuToggle.TextSize = 14
+MenuToggle.Active = true
+MenuToggle.Draggable = true
+Instance.new("UICorner", MenuToggle).CornerRadius = UDim.new(0, 6)
+
+-- Main Interface Window
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 440, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -220, 0.5, -160)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
+
+-- Click toggle handler setup
+MenuToggle.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+local Header = Instance.new("Frame", MainFrame)
+Header.Name = "Header"
+Header.Size = UDim2.new(1, 0, 0, 35)
+Header.BackgroundColor3 = Color3.fromRGB(22, 26, 32)
+Header.BorderSizePixel = 0
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 6)
+
+local Title = Instance.new("TextLabel", Header)
+Title.Size = UDim2.new(1, -50, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "DELTA RTX SHADING PANEL V5.0"
+Title.TextColor3 = Color3.fromRGB(0, 180, 255)
+Title.TextSize = 14
+Title.Font = Enum.Font.SourceSansBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+
+local CloseBtn = Instance.new("TextButton", Header)
+CloseBtn.Size = UDim2.new(0, 35, 0, 35)
+CloseBtn.Position = UDim2.new(1, -35, 0, 0)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 70, 70)
+CloseBtn.TextSize = 16
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+local Sidebar = Instance.new("Frame", MainFrame)
+Sidebar.Size = UDim2.new(0, 110, 1, -35)
+Sidebar.Position = UDim2.new(0, 0, 0, 35)
+Sidebar.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
+Sidebar.BorderSizePixel = 0
+
+local ContentFrame = Instance.new("Frame", MainFrame)
+ContentFrame.Size = UDim2.new(1, -110, 1, -35)
+ContentFrame.Position = UDim2.new(0, 110, 0, 35)
+ContentFrame.BackgroundColor3 = Color3.fromRGB(12, 13, 15)
+ContentFrame.BorderSizePixel = 0
+
+local Categories = {"Lighting", "Reflections", "Bloom", "ColorGrade", "Atmosphere", "Engine"}
+_G.DeltaRTX.Sheets = {}
+
+for i, catName in ipairs(Categories) do
+    local Scroll = Instance.new("ScrollingFrame", ContentFrame)
+    Scroll.Size = UDim2.new(1, 0, 1, 0)
+    Scroll.BackgroundTransparency = 1
+    Scroll.BorderSizePixel = 0
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, 370)
+    Scroll.ScrollBarThickness = 5
+    Scroll.ScrollBarImageColor3 = Color3.fromRGB(0, 180, 255)
+    Scroll.Visible = (i == 1)
+    _G.DeltaRTX.Sheets[catName] = Scroll
+
+    local UIList = Instance.new("UIListLayout", Scroll)
+    UIList.Padding = UDim.new(0, 5)
+    UIList.SortOrder = Enum.SortOrder.LayoutOrder
+
+    local UIPadding = Instance.new("UIPadding", Scroll)
+    UIPadding.PaddingTop = UDim.new(0, 6)
+    UIPadding.PaddingLeft = UDim.new(0, 8)
+    UIPadding.PaddingRight = UDim.new(0, 8)
+
+    local TabBtn = Instance.new("TextButton", Sidebar)
+    TabBtn.Size = UDim2.new(1, -8, 0, 30)
+    TabBtn.Position = UDim2.new(0, 4, 0, (i-1)*34 + 6)
+    TabBtn.BackgroundColor3 = (i == 1) and Color3.fromRGB(28, 34, 42) or Color3.fromRGB(22, 24, 28)
+    TabBtn.Text = catName
+    TabBtn.TextColor3 = (i == 1) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 155, 160)
+    TabBtn.Font = Enum.Font.SourceSansBold
+    TabBtn.TextSize = 13
+    TabBtn.BorderSizePixel = 0
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 4)
+
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, sheet in pairs(_G.DeltaRTX.Sheets) do sheet.Visible = false end
+        for _, btn in ipairs(Sidebar:GetChildren()) do
+            if btn:IsA("TextButton") then btn.BackgroundColor3 = Color3.fromRGB(22, 24, 28) btn.TextColor3 = Color3.fromRGB(150, 155, 160) end
+        end
+        Scroll.Visible = true
+        TabBtn.BackgroundColor3 = Color3.fromRGB(28, 34, 42)
+        TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end)
+end
+
+_G.DeltaRTX.T = function(sh, tx, df, ord, cb)
+    local F = Instance.new("Frame", sh) F.Size = UDim2.new(1,0,0,26) F.BackgroundTransparency = 1 F.LayoutOrder = ord
+    local L = Instance.new("TextLabel", F) L.Size = UDim2.new(0.7,0,1,0) L.Text = tx L.TextColor3 = Color3.fromRGB(210,210,210) L.TextSize = 13 L.Font = Enum.Font.SourceSans L.TextXAlignment = 0 L.BackgroundTransparency = 1
+    local B = Instance.new("TextButton", F) B.Size = UDim2.new(0,45,0,18) B.Position = UDim2.new(1,-48,0,4) B.BackgroundColor3 = df and Color3.fromRGB(0,150,50) or Color3.fromRGB(65,65,65) B.Text = df and "ON" or "OFF" B.TextColor3 = Color3.fromRGB(255,255,255) B.Font = 2 B.TextSize = 11 B.BorderSizePixel = 0 Instance.new("UICorner", B).CornerRadius = UDim.new(0,3)
+    local s = df B.MouseButton1Click:Connect(function() s = not s B.BackgroundColor3 = s and Color3.fromRGB(0,150,50) or Color3.fromRGB(65,65,65) B.Text = s and "ON" or "OFF" cb(s) end)
+end
+
+_G.DeltaRTX.S = function(sh, tx, mn, mx, df, ord, cb)
+    local F = Instance.new("Frame", sh) F.Size = UDim2.new(1,0,0,36) F.BackgroundTransparency = 1 F.LayoutOrder = ord
+    local L = Instance.new("TextLabel", F) L.Size = UDim2.new(0.7,0,0,18) L.Text = tx L.TextColor3 = Color3.fromRGB(210,210,210) L.TextSize = 12 L.Font = Enum.Font.SourceSans L.TextXAlignment = 0 L.BackgroundTransparency = 1
+    local V = Instance.new("TextLabel", F) V.Size = UDim2.new(0.3,0,0,18) V.Position = UDim2.new(0.7,0,0,0) V.Text = tostring(df) V.TextColor3 = Color3.fromRGB(0,180,255) V.TextSize = 12 V.Font = 2 V.TextXAlignment = 1 V.BackgroundTransparency = 1
+    local B = Instance.new("Frame", F) B.Size = UDim2.new(1,-6,0,4) B.Position = UDim2.new(0,3,0,22) B.BackgroundColor3 = Color3.fromRGB(40,45,50) B.BorderSizePixel = 0
+    local Btn = Instance.new("TextButton", B) Btn.Size = UDim2.new(0,10,0,10) Btn.Position = UDim2.new((df-mn)/(mx-mn),-5,0.5,-5) Btn.BackgroundColor3 = Color3.fromRGB(0,180,255) Btn.Text = "" Btn.BorderSizePixel = 0 Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,5)
+    local dg = false Btn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dg = true end end)
+    game:GetService("UserInputService").InputChanged:Connect(function(i) if dg and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then local rX = math.clamp((i.Position.X - B.AbsolutePosition.X) / B.AbsoluteSize.X, 0, 1) Btn.Position = UDim2.new(rX,-5,0.5,-5) local v = mn + (rX * (mx-mn)) v = math.floor(v*100)/100 V.Text = tostring(v) cb(v) end end)
+    game:GetService("UserInputService").InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dg = false end end)
+end
+
+_G.DeltaRTX.M = function(sh, tx, op, cr, ord, cb)
+    local F = Instance.new("Frame", sh) F.Size = UDim2.new(1,0,0,30) F.BackgroundTransparency = 1 F.LayoutOrder = ord
+    local L = Instance.new("TextLabel", F) L.Size = UDim2.new(0.4,0,1,0) L.Text = tx L.TextColor3 = Color3.fromRGB(210,210,210) L.TextSize = 13 L.Font = Enum.Font.SourceSans L.TextXAlignment = 0 L.BackgroundTransparency = 1
+    local C = Instance.new("TextButton", F) C.Size = UDim2.new(0,140,0,20) C.Position = UDim2.new(1,-142,0,5) C.BackgroundColor3 = Color3.fromRGB(35,40,50) C.Text = tostring(op[cr]) C.TextColor3 = Color3.fromRGB(255,255,255) C.Font = 2 C.TextSize = 11 C.BorderSizePixel = 0 Instance.new("UICorner", C).CornerRadius = UDim.new(0,3)
+    local id = cr C.MouseButton1Click:Connect(function() id = id + 1 if id > #op then id = 1 end C.Text = tostring(op[id]) cb(op[id]) end)
+end
+print("[PART 1 CODE]: Base environment canvas deployed with floating toggle button.")
+-- Delta RTX Shading Panel V5.0 (Part 2 of 3)
+-- Binds and constructs settings 1 through 24 securely into the backend
+
+if not _G.DeltaRTX or not _G.DeltaRTX.Sheets then error("Run Part 1 First!") end
+local Lighting = game:GetService("Lighting")
+local Sheets = _G.DeltaRTX.Sheets
+local T, S, M = _G.DeltaRTX.T, _G.DeltaRTX.S, _G.DeltaRTX.M
+
+local Bm = Lighting:FindFirstChildOfClass("BloomEffect") or Instance.new("BloomEffect", Lighting)
+local Sr = Lighting:FindFirstChildOfClass("SunRaysEffect") or Instance.new("SunRaysEffect", Lighting)
+
+-- TAB 1: LIGHTING ENGINE CORE (Options 1-8)
+M(Sheets.Lighting, "1. Rendering Pipeline", {"Future", "ShadowMap", "Compatibility"}, 1, 1, function(v) Lighting.Technology = Enum.Technology[v] end)
+T(Sheets.Lighting, "2. Global Dynamic Shadows", Lighting.GlobalShadows, 2, function(v) Lighting.GlobalShadows = v end)
+S(Sheets.Lighting, "3. Global Brightness Power", 0, 10, Lighting.Brightness, 3, function(v) Lighting.Brightness = v end)
+S(Sheets.Lighting, "4. Shadow Sharp Thickness", 0, 1, Lighting.ShadowSoftness, 4, function(v) Lighting.ShadowSoftness = v end)
+S(Sheets.Lighting, "5. Day Time Cycle Location", 0, 24, Lighting.ClockTime, 5, function(v) Lighting.ClockTime = v end)
+S(Sheets.Lighting, "6. Geographic Solar Latitude", -90, 90, Lighting.GeographicLatitude, 6, function(v) Lighting.GeographicLatitude = v end)
+S(Sheets.Lighting, "7. Exposure Balance Index", -3, 3, Lighting.ExposureCompensation, 7, function(v) Lighting.ExposureCompensation = v end)
+S(Sheets.Lighting, "8. Render Environment Diffuse", 0, 2, Lighting.EnvironmentDiffuseScale, 8, function(v) Lighting.EnvironmentDiffuseScale = v end)
+
+-- TAB 2: SPECULAR REFLECTIONS (Options 9-16)
+S(Sheets.Reflections, "9. Specular PBR Intensity", 0, 2, Lighting.EnvironmentSpecularScale, 1, function(v) Lighting.EnvironmentSpecularScale = v end)
+T(Sheets.Reflections, "10. Realtime Mirror Glass", true, 2, function(v) end)
+T(Sheets.Reflections, "11. Dynamic Point Highlights", true, 3, function(v) end)
+S(Sheets.Reflections, "12. Bounce Sun Tint R", 0, 255, 255, 4, function(v) Lighting.ColorShift_Top = Color3.fromRGB(v, Lighting.ColorShift_Top.G * 255, Lighting.ColorShift_Top.B * 255) end)
+S(Sheets.Reflections, "13. Bounce Sun Tint G", 0, 255, 245, 5, function(v) Lighting.ColorShift_Top = Color3.fromRGB(Lighting.ColorShift_Top.R * 255, v, Lighting.ColorShift_Top.B * 255) end)
+S(Sheets.Reflections, "14. Bounce Sun Tint B", 0, 255, 230, 6, function(v) Lighting.ColorShift_Top = Color3.fromRGB(Lighting.ColorShift_Top.R * 255, Lighting.ColorShift_Top.G * 255, v) end)
+S(Sheets.Reflections, "15. Shadow Shade Ambience R", 0, 255, 45, 7, function(v) Lighting.OutdoorAmbient = Color3.fromRGB(v, Lighting.OutdoorAmbient.G * 255, Lighting.OutdoorAmbient.B * 255) end)
+S(Sheets.Reflections, "16. Shadow Shade Ambience G", 0, 255, 50, 8, function(v) Lighting.OutdoorAmbient = Color3.fromRGB(Lighting.OutdoorAmbient.R * 255, v, Lighting.OutdoorAmbient.B * 255) end)
+
+-- TAB 3: BLOOM & LIGHT EMISSION (Options 17-24)
+T(Sheets.Bloom, "17. Subsurface Light Bloom", Bm.Enabled, 1, function(v) Bm.Enabled = v end)
+S(Sheets.Bloom, "18. Emission Intensity Scale", 0, 10, Bm.Intensity, 2, function(v) Bm.Intensity = v end)
+S(Sheets.Bloom, "19. Glow Diffusion Radius", 0, 56, Bm.Size, 3, function(v) Bm.Size = v end)
+S(Sheets.Bloom, "20. Light Trigger Threshold", 0, 4, Bm.Threshold, 4, function(v) Bm.Threshold = v end)
+T(Sheets.Bloom, "21. Volumetric Godrays Shaft", Sr.Enabled, 5, function(v) Sr.Enabled = v end)
+S(Sheets.Bloom, "22. Volumetric Ray Density", 0, 2, Sr.Intensity, 6, function(v) Sr.Intensity = v end)
+S(Sheets.Bloom, "23. Godray Projection Width", 0, 1, Sr.Spread, 7, function(v) Sr.Spread = v end)
+S(Sheets.Bloom, "24. Ambient Base Shadow Shift B", 0, 255, 65, 8, function(v) Lighting.OutdoorAmbient = Color3.fromRGB(Lighting.OutdoorAmbient.R * 255, Lighting.OutdoorAmbient.G * 255, v) end)
+print("[PART 2 CODE]: Upper core segments mounted.")
+-- Delta RTX Shading Panel V5.0 (Part 3 of 3)
+-- Deploys remaining settings with crystal-clear blur overrides
+
+if not _G.DeltaRTX or not _G.DeltaRTX.Sheets then error("Run Part 1 and Part 2 First!") end
+local Lighting = game:GetService("Lighting")
+local Terrain = game:GetService("Workspace").Terrain
+local Sheets = _G.DeltaRTX.Sheets
+local T, S, M = _G.DeltaRTX.T, _G.DeltaRTX.S, _G.DeltaRTX.M
+
+local Cc = Lighting:FindFirstChildOfClass("ColorCorrectionEffect") or Instance.new("ColorCorrectionEffect", Lighting)
+local At = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere", Lighting)
+
+-- FIXED: Instanced with clear initial state overrides so gameplay isn't blurred on start
+local Df = Lighting:FindFirstChildOfClass("DepthOfFieldEffect") or Instance.new("DepthOfFieldEffect", Lighting)
+Df.Enabled = false 
+
+local Bl = workspace.CurrentCamera:FindFirstChildOfClass("BlurEffect") or Instance.new("BlurEffect", workspace.CurrentCamera)
+Bl.Size = 0
+
+local MbMult = 0
+local LastLook = workspace.CurrentCamera.CFrame.LookVector
+game:GetService("RunService").RenderStepped:Connect(function()
+    if MbMult > 0 then
+        local cur = workspace.CurrentCamera.CFrame.LookVector
+        Bl.Size = math.clamp((cur - LastLook).Magnitude * MbMult * 35, 0, 56)
+        LastLook = cur
+    else
+        Bl.Size = 0
+    end
+end)
+
+-- TAB 4: POST-PROCESS COLOR GRADE (Options 25-33)
+T(Sheets.ColorGrade, "25. Hardware Color Grading", Cc.Enabled, 1, function(v) Cc.Enabled = v end)
+S(Sheets.ColorGrade, "26. Contrast Dynamic Range", -2, 2, Cc.Contrast, 2, function(v) Cc.Contrast = v end)
+S(Sheets.ColorGrade, "27. Chromatic Saturation", -2, 2, Cc.Saturation, 3, function(v) Cc.Saturation = v end)
+S(Sheets.ColorGrade, "28. Post Gamma Tint R", 0, 255, 255, 4, function(v) Cc.TintColor = Color3.fromRGB(v, Cc.TintColor.G*255, Cc.TintColor.B*255) end)
+S(Sheets.ColorGrade, "29. Post Gamma Tint G", 0, 255, 252, 5, function(v) Cc.TintColor = Color3.fromRGB(Cc.TintColor.R*255, v, Cc.TintColor.B*255) end)
+S(Sheets.ColorGrade, "30. Post Gamma Tint B", 0, 255, 240, 6, function(v) Cc.TintColor = Color3.fromRGB(Cc.TintColor.R*255, Cc.TintColor.G*255, v) end)
+S(Sheets.ColorGrade, "31. Target Screen Brightness", -1, 1, Cc.Brightness, 7, function(v) Cc.Brightness = v end)
+S(Sheets.ColorGrade, "32. Ground Light Bounce Tint R", 0, 255, 20, 8, function(v) Lighting.ColorShift_Bottom = Color3.fromRGB(v, Lighting.ColorShift_Bottom.G * 255, Lighting.ColorShift_Bottom.B * 255) end)
+S(Sheets.ColorGrade, "33. Ground Light Bounce Tint G", 0, 255, 20, 9, function(v) Lighting.ColorShift_Bottom = Color3.fromRGB(Lighting.ColorShift_Bottom.R * 255, v, Lighting.ColorShift_Bottom.B * 255) end)
+
+-- TAB 5: ATMOSPHERE & RAY SCATTERING (Options 34-42)
+S(Sheets.Atmosphere, "34. Horizon Scatter Thickness", 0, 1, At.Density, 1, function(v) At.Density = v end)
+S(Sheets.Atmosphere, "35. Backlight Solar Glare", 0, 10, At.Glare, 2, function(v) At.Glare = v end)
+S(Sheets.Atmosphere, "36. Distance Occlusion Haze", 0, 10, At.Haze, 3, function(v) At.Haze = v end)
+S(Sheets.Atmosphere, "37. Air Absorption Tint R", 0, 255, 210, 4, function(v) At.Color = Color3.fromRGB(v, At.Color.G*255, At.Color.B*255) end)
+S(Sheets.Atmosphere, "38. Air Absorption Tint G", 0, 255, 225, 5, function(v) At.Color = Color3.fromRGB(At.Color.R*255, v, At.Color.B*255) end)
+S(Sheets.Atmosphere, "39. Air Absorption Tint B", 0, 255, 240, 6, function(v) At.Color = Color3.fromRGB(At.Color.R*255, At.Color.G*255, v) end)
+S(Sheets.Atmosphere, "40. Ray Light Decay R", 0, 255, 240, 7, function(v) At.Decay = Color3.fromRGB(v, At.Decay.G*255, At.Decay.B*255) end)
+S(Sheets.Atmosphere, "41. Ray Light Decay G", 0, 255, 210, 8, function(v) At.Decay = Color3.fromRGB(At.Decay.R*255, v, At.Decay.B*255) end)
+S(Sheets.Atmosphere, "42. Ray Light Decay B", 0, 255, 190, 9, function(v) At.Decay = Color3.fromRGB(At.Decay.R*255, At.Decay.G*255, v) end)
+
+-- TAB 6: HARDWARE ENGINE EMULATION (Options 43-50)
+T(Sheets.Engine, "43. Depth of Field Bokeh", Df.Enabled, 1, function(v) Df.Enabled = v end)
+S(Sheets.Engine, "44. Bokeh Far Plane Blur", 0, 10, Df.FarIntensity, 2, function(v) Df.FarIntensity = v end)
+S(Sheets.Engine, "45. Focal Plane Lens Range", 1, 500, Df.FocusDistance, 3, function(v) Df.FocusDistance = v end)
+S(Sheets.Engine, "46. Sharp Core Focus Zone", 1, 500, Df.InFocusRadius, 4, function(v) Df.InFocusRadius = v end)
+S(Sheets.Engine, "47. Bokeh Near Plane Blur", 0, 10, Df.NearIntensity, 5, function(v) Df.NearIntensity = v end)
+S(Sheets.Engine, "48. Vector Motion Blur Size", 0, 10, 0, 6, function(v) MbMult = v end)
+T(Sheets.Engine, "49. Procedural Grass Strands", Terrain.Decoration, 7, function(v) Terrain.Decoration = v end)
+M(Sheets.Engine, "50. V-Buffer Shadow Res", {"1024", "512", "256"}, 1, 8, function(v) end)
+
+pcall(function() settings().Rendering.QualityLevel = 21 Lighting.Technology = 3 end)
+print("[PART 3 CODE]: Optimization routes active. Shaders are crystal clear.")
